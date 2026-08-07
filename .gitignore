@@ -1,0 +1,27 @@
+# 环境变量（含密钥，不提交）
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# uv
+uv.lock
+
+# 临时文件
+temp_data/
+temp-files/
+
+# IDE
+.idea/
+.vscode/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+logs/

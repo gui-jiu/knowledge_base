@@ -1,0 +1,23 @@
+[project]
+name = "knowledge-base"
+version = "0.1.0"
+description = "掌柜智库 - 企业级RAG智能知识库系统"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "colorlog>=6.12.0",
+    "fastapi>=0.141.1",
+    "grandalf>=0.8",
+    "langchain>=1.3.14",
+    "langchain-openai>=1.4.1",
+    "langchain-text-splitters>=1.1.2",
+    "langgraph>=1.2.10",
+    "minio>=7.2.20",
+    "numpy>=2.4.6",
+    "pymilvus==2.5.5",
+    "pymongo>=4.17.0",
+    "python-dotenv>=1.2.2",
+    "uvicorn[standard]>=0.52.1",
+]
+
+[tool.uv]
