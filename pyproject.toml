@@ -17,6 +17,7 @@ dependencies = [
     "pymilvus==2.5.5",
     "pymongo>=4.17.0",
     "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
     "uvicorn[standard]>=0.52.1",
 ]
 
