@@ -10,6 +10,10 @@ from app.core.mineru_config import mineru_config
 from app.import_process.agent.node_base import NodeBase
 from app.import_process.agent.state import ImportGraphState
 
+# MinerU 是国内服务，绕过系统代理（避免 Clash 等系统代理导致 SSL 中断）
+_http = requests.Session()
+_http.trust_env = False
+
 
 class NodePdfToMd(NodeBase):
     """
@@ -107,7 +111,7 @@ class NodePdfToMd(NodeBase):
         logger.info(f"【获取上传链接】调用接口：{url}，请求参数：{data}")
 
         # 调用接口：获取上传url和任务的batch_id
-        response = requests.post(url, headers=header, json=data)
+        response = _http.post(url, headers=header, json=data)
 
         # 对响应结果进行校验
         # 先校验http状态
@@ -126,7 +130,7 @@ class NodePdfToMd(NodeBase):
         # 3、文件上传
         logger.info(f"【文件上传】开始上传PDF文件：{pdf_path_obj.name}")
         with open(pdf_path_obj, "rb") as f:
-            res_upload = requests.put(signed_url, data=f)
+            res_upload = _http.put(signed_url, data=f)
             if res_upload.status_code != 200:
                 raise RuntimeError(f"【文件上传】上传失败：状态码：{res_upload.status_code}，响应结果：{res_upload}")
             print(f"【文件上传】成功！")
@@ -148,7 +152,7 @@ class NodePdfToMd(NodeBase):
 
             # 发起轮询请求，短超时10秒，异常则重试
             try:
-                res_poll = requests.get(url=poll_url, headers=header, timeout=10)
+                res_poll = _http.get(url=poll_url, headers=header, timeout=10)
             except Exception as e:
                 logger.warning(f"【任务轮询】网络请求异常，{poll_interval}秒后重试：{str(e)}")
                 time.sleep(poll_interval)
@@ -198,7 +202,7 @@ class NodePdfToMd(NodeBase):
 
         # 1、下载ZIP包
         logger.info(f"【ZIP下载】开始下载ZIP包：{zip_url} ...")
-        response = requests.get(zip_url)
+        response = _http.get(zip_url)
 
         # 对响应结果进行校验
         if response.status_code != 200:

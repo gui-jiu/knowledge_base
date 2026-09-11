@@ -72,8 +72,7 @@ class NodeBase(ABC):
 
              # 统一处理所有步骤的异常
              error_msg = f"【{self.name}】流程执行失败：{str(e)}"
-             logger.exception(error_msg, e) # logger.exception 会打印完整的堆栈跟踪，等同于下面的用法
-             # logger.exception(error_msg, exc_info=True)  # exc_info=True 会打印完整的堆栈跟踪
+             logger.exception(error_msg)  # logger.exception 会打印完整的堆栈跟踪
 
              raise  # 重新抛出异常，确保工作流引擎知道此节点失败并停止后续流程
 
