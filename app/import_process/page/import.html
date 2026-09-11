@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>掌柜智库 - 文档导入</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Microsoft YaHei", sans-serif; background: #f5f6fa; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 32px; width: 520px; }
+        h1 { font-size: 20px; color: #2c3e50; margin-bottom: 8px; }
+        p.desc { color: #888; font-size: 13px; margin-bottom: 24px; }
+        .drop { border: 2px dashed #bdc3c7; border-radius: 10px; padding: 40px; text-align: center; color: #95a5a6; cursor: pointer; transition: all .2s; }
+        .drop:hover { border-color: #3498db; color: #3498db; }
+        .drop input { display: none; }
+        .filename { margin-top: 12px; color: #2c3e50; font-size: 14px; }
+        button { margin-top: 20px; width: 100%; padding: 12px; background: #3498db; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .status { margin-top: 20px; font-size: 14px; color: #555; }
+        .progress-bar { height: 8px; background: #ecf0f1; border-radius: 4px; margin-top: 10px; overflow: hidden; }
+        .progress-bar span { display: block; height: 100%; width: 0; background: #3498db; transition: width .3s; }
+        .nodes { margin-top: 12px; font-size: 12px; color: #888; }
+        .nodes div { padding: 2px 0; }
+        .nodes .done { color: #2ecc71; }
+        .nodes .running { color: #f39c12; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>掌柜智库 · 文档导入</h1>
+        <p class="desc">上传 PDF / Markdown 文档，系统将自动解析、切分、向量化并存入知识库</p>
+
+        <label class="drop" for="fileInput">
+            <div>点击选择文件 或 拖拽到此处</div>
+            <div style="font-size:12px;margin-top:8px;">支持 .pdf / .md</div>
+            <input type="file" id="fileInput" accept=".pdf,.md">
+        </label>
+        <div class="filename" id="filename"></div>
+
+        <button id="uploadBtn" onclick="upload()">开始导入</button>
+
+        <div class="status" id="status"></div>
+        <div class="progress-bar"><span id="progressBar"></span></div>
+        <div class="nodes" id="nodes"></div>
+    </div>
+
+    <script>
+        const API_BASE = "http://localhost:8000";
+        const fileInput = document.getElementById("fileInput");
+        const filenameDom = document.getElementById("filename");
+        const statusDom = document.getElementById("status");
+        const progressBar = document.getElementById("progressBar");
+        const nodesDom = document.getElementById("nodes");
+        const uploadBtn = document.getElementById("uploadBtn");
+
+        const NODE_LABELS = {
+            node_entry: "入口判断",
+            node_pdf_to_md: "PDF转Markdown",
+            node_md_img: "图片处理",
+            node_document_split: "文档切分",
+            node_item_name_recognition: "主体识别",
+            node_bge_embedding: "向量化",
+            node_import_milvus: "存入向量库",
+        };
+        const ALL_NODES = Object.keys(NODE_LABELS);
+
+        fileInput.addEventListener("change", () => {
+            filenameDom.textContent = fileInput.files.length ? "已选择：" + fileInput.files[0].name : "";
+        });
+
+        function renderNodes(nodeStatus) {
+            nodesDom.innerHTML = "";
+            let doneCount = 0;
+            ALL_NODES.forEach(n => {
+                const st = (nodeStatus && nodeStatus[n]) || "pending";
+                if (st === "done") doneCount++;
+                const div = document.createElement("div");
+                div.className = st;
+                const icon = st === "done" ? "✓" : (st === "running" ? "●" : "○");
+                div.textContent = icon + " " + (NODE_LABELS[n] || n) + "  [" + st + "]";
+                nodesDom.appendChild(div);
+            });
+            progressBar.style.width = Math.round(doneCount / ALL_NODES.length * 100) + "%";
+        }
+
+        async function upload() {
+            if (!fileInput.files.length) { alert("请先选择文件"); return; }
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            uploadBtn.disabled = true;
+            statusDom.textContent = "正在上传...";
+
+            try {
+                const resp = await fetch(API_BASE + "/upload", { method: "POST", body: formData });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || "上传失败");
+                const taskId = data.task_id;
+                statusDom.textContent = "导入中... task_id: " + taskId;
+
+                // 轮询状态
+                const timer = setInterval(async () => {
+                    const r = await fetch(API_BASE + "/status/" + taskId);
+                    const s = await r.json();
+                    renderNodes(s.nodes);
+                    statusDom.textContent = "状态：" + s.status + " | task_id: " + taskId;
+                    if (s.status === "completed" || s.status === "failed" || s.status === "done") {
+                        clearInterval(timer);
+                        uploadBtn.disabled = false;
+                        statusDom.textContent = s.status === "failed" ? "导入失败" : "导入完成 ✓";
+                    }
+                }, 1500);
+
+            } catch (err) {
+                statusDom.textContent = "错误：" + err.message;
+                uploadBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
